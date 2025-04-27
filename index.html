@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TherapyApp Backend Tester</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+    h2 { color: #333; }
+    section { background: white; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    input, textarea, button { margin: 5px 0; width: 100%; padding: 8px; }
+    #chat { height: 250px; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 10px; background: #fff; }
+  </style>
+</head>
+<body>
+
+<h1>💬 TherapyApp Full Backend Tester</h1>
+
+<!-- Real-Time Messaging -->
+<section>
+  <h2>Real-Time Chat</h2>
+  <div id="chat"></div>
+  <input type="text" id="senderId" placeholder="Your ID">
+  <input type="text" id="receiverId" placeholder="Receiver ID">
+  <input type="text" id="messageInput" placeholder="Type your message...">
+  <button onclick="sendMessage()">Send Message</button>
+</section>
+
+<!-- Homework Assignment -->
+<section>
+  <h2>Assign Homework</h2>
+  <input type="text" id="homeworkTitle" placeholder="Homework Title">
+  <textarea id="homeworkDetails" placeholder="Homework Details"></textarea>
+  <button onclick="assignHomework()">Assign Homework</button>
+</section>
+
+<!-- Payment -->
+<section>
+  <h2>Trigger Payment</h2>
+  <input type="text" id="paymentClientId" placeholder="Client ID">
+  <input type="text" id="paymentTherapistId" placeholder="Therapist ID">
+  <input type="number" id="paymentAmount" placeholder="Amount ($)">
+  <input type="text" id="paymentDescription" placeholder="Session Description">
+  <input type="date" id="paymentSessionDate" placeholder="Session Date">
+  <button onclick="startPayment()">Start Payment</button>
+</section>
+
+<!-- Session Notes -->
+<section>
+  <h2>Save Session Note</h2>
+  <input type="text" id="noteClientId" placeholder="Client ID">
+  <textarea id="sessionNotes" placeholder="Write session notes..."></textarea>
+  <button onclick="saveSessionNote()">Save Note</button>
+</section>
+
+<!-- Session History -->
+<section>
+  <h2>Fetch Session History</h2>
+  <input type="text" id="historyClientId" placeholder="Client ID">
+  <button onclick="fetchSessionHistory()">Get Session History</button>
+  <div id="sessionHistory"></div>
+</section>
+
+<script>
+  const socket = io('http://localhost:3000');
+
+  // ----------------- Messaging -----------------
+  const chatBox = document.getElementById('chat');
+
+  socket.on('receiveMessage', (data) => {
+    const msg = document.createElement('div');
+    msg.innerHTML = `<strong>${data.senderId}:</strong> ${data.message} <small>(${new Date(data.timestamp).toLocaleTimeString()})</small>`;
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  });
+
+  function sendMessage() {
+    const senderId = document.getElementById('senderId').value;
+    const receiverId = document.getElementById('receiverId').value;
+    const message = document.getElementById('messageInput').value;
+
+    socket.emit('sendMessage', { senderId, receiverId, message });
+    document.getElementById('messageInput').value = '';
+  }
+
+  // ----------------- Homework Assignment -----------------
+  async function assignHomework() {
+    const title = document.getElementById('homeworkTitle').value;
+    const details = document.getElementById('homeworkDetails').value;
+
+    await fetch('http://localhost:3000/api/homework/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, details })
+    }).then(res => res.json())
+      .then(data => alert('Homework assigned: ' + JSON.stringify(data)))
+      .catch(err => console.error(err));
+  }
+
+  // ----------------- Payment -----------------
+  async function startPayment() {
+    const clientId = document.getElementById('paymentClientId').value;
+    const therapistId = document.getElementById('paymentTherapistId').value;
+    const amount = document.getElementById('paymentAmount').value;
+    const description = document.getElementById('paymentDescription').value;
+    const sessionDate = document.getElementById('paymentSessionDate').value;
+
+    await fetch('http://localhost:3000/api/payments/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, therapistId, amount, description, sessionDate })
+    }).then(res => res.json())
+      .then(data => {
+        if (data.url) window.open(data.url, '_blank');
+        else alert('Error: ' + JSON.stringify(data));
+      })
+      .catch(err => console.error(err));
+  }
+
+  // ----------------- Session Notes -----------------
+  async function saveSessionNote() {
+    const clientId = document.getElementById('noteClientId').value;
+    const notes = document.getElementById('sessionNotes').value;
+
+    await fetch('http://localhost:3000/api/notes/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientId, notes })
+    }).then(res => res.json())
+      .then(data => alert('Session note saved!'))
+      .catch(err => console.error(err));
+  }
+
+  // ----------------- Session History -----------------
+  async function fetchSessionHistory() {
+    const clientId = document.getElementById('historyClientId').value;
+
+    await fetch(`http://localhost:3000/api/notes/history/${clientId}`)
+      .then(res => res.json())
+      .then(data => {
+        const historyBox = document.getElementById('sessionHistory');
+        historyBox.innerHTML = '<h4>Session History:</h4>';
+        data.forEach(note => {
+          const item = document.createElement('div');
+          item.innerHTML = `<p><strong>${new Date(note.timestamp).toLocaleDateString()}:</strong> ${note.notes}</p>`;
+          historyBox.appendChild(item);
+        });
+      })
+      .catch(err => console.error(err));
+  }
+</script>
+
+</body>
+</html>
