@@ -38,11 +38,15 @@ app.use(express.json());
 const authRoute = require('./routes/auth');
 const paymentsRoutes = require('./routes/payments');
 const messagesRoutes = require('./routes/messages');
+const appointmentRoutes = require('./routes/appointmentRoutes');   // <-- NEW LINE
+const chatRoutes = require('./routes/chatRoutes');                 // (already imported)
 
 // Route middlewares
 app.use('/api/user', authRoute);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/messages', messagesRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/appointments', appointmentRoutes);  // <-- NEW LINE
 
 // Basic route
 app.get('/', (req, res) => {
